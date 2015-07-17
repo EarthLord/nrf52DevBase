@@ -1,0 +1,6 @@
+/**
+*\defgroup peripheral-drivers Peripheral Drivers
+* This module contains all the peripheral drivers required for the nrf52832 System on Chip 
+* @{
+*/
+/** @} */

@@ -1,0 +1,9 @@
+/**
+\mainpage nr52832 dev platform exploration
+
+Overview
+========
+
+Explore the exploration
+*/
+
