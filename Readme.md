@@ -1,3 +1,3 @@
 Overview
 --------
-The license is BSD clause-3 for this project. This project aims to understand the working of nrf52832.
+This project aims create a base to easily get started with the nrf52832 SoC. The license is BSD clause-3 for this project. 
