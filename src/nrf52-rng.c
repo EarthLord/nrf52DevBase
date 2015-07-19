@@ -1,4 +1,4 @@
-/* 	Copyright (c) 2014, Prithvi Raj Narendra
+/* 	Copyright (c) 2015, Prithvi Raj Narendra
  *	All rights reserved.
  *
  *	Redistribution and use in source and binary forms, with or without modification,
@@ -27,46 +27,46 @@
  *	POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @addtogroup hf-timer
- * @{
- *
- * @file
- * This file contains the implementation for profiling and time-stamping timer using TIMER0 peripheral
- * @author
- * Prithvi
- */
+#include <stdbool.h>
+#include <nrf.h>
+#include "irq_priority.h"
+#include "nrf52-rng.h"
 
-#include "nrf52-timer0.h"
-#include "nrf52-clock.h"
-#include "tfp_printf.h"
+static volatile bool rng_done;
+static volatile uint8_t *rng_ptr;
+static volatile uint32_t rng_len;
 
-
-void profile_timer_init(void){
-	/* Initialize the HF clock if it is not already running*/
-	hfclk_xtal_init();
-
-    NRF_TIMER0->TASKS_STOP	   = 1;                    		// Stop timer.
-	NRF_TIMER0->MODE           = TIMER_MODE_MODE_Timer;  	// Set the timer in Timer Mode.
-	NRF_TIMER0->PRESCALER      = TIMER0_PRESCALER;			// Prescaler 0 produces 16 MHz.
-	NRF_TIMER0->BITMODE        = TIMER0_BITSIZE;  			// 32 bit mode.
-	NRF_TIMER0->TASKS_CLEAR    = 1;                         // clear the task first to be usable for later.
-
-    NRF_TIMER0->TASKS_START   = 1;                    		// Start timer.
+void RNG_IRQHandler(void){
+	NRF_RNG->EVENTS_VALRDY = 0;	
+	(void) NRF_RNG->EVENTS_VALRDY;
+	if (rng_len){
+		*rng_ptr = NRF_RNG->VALUE;
+		rng_ptr++;
+		rng_len--;
+	}else{
+		rng_done = true;
+	}		
 }
 
-void printfcomma (uint32_t num) {
-    if (num < 1000) {
-        tfp_printf ("%d", (int)num);
-        return;
-    }
-    printfcomma (num/1000);
-    tfp_printf (",%03d",(int) num%1000);
+void rng_get_bytes(uint8_t * rng_buf_ptr, uint32_t rng_buf_len){
+	rng_done = false;
+	rng_ptr = rng_buf_ptr;
+	rng_len = rng_buf_len;
+
+	NRF_RNG->CONFIG = RNG_CONFIG_DERCEN_Enabled;
+	NRF_RNG->INTENSET = (RNG_INTENSET_VALRDY_Set << RNG_INTENSET_VALRDY_Pos);
+	NRF_RNG->EVENTS_VALRDY = 0;
+
+	NVIC_SetPriority(RNG_IRQn, PRIORITY_RNG_IRQn);
+	NVIC_EnableIRQ(RNG_IRQn);	
+
+	NRF_RNG->TASKS_START = 1;
+	while (false == rng_done){
+		__WFI();
+	}
+	NRF_RNG->TASKS_STOP = 1;
+
+	NRF_RNG->INTENCLR = (RNG_INTENCLR_VALRDY_Clear << RNG_INTENCLR_VALRDY_Pos);
+	NVIC_DisableIRQ(RNG_IRQn);	
 }
 
-void profile_timer_stop(void){
-    NRF_TIMER0->TASKS_STOP	   = 1;                    		// Stop timer.
-}
-/**
- * @}
- */

@@ -41,8 +41,8 @@
  * Prithvi
  */
 
-#ifndef CLOCK_INIT_H_
-#define CLOCK_INIT_H_
+#ifndef NRF52_CLOCK_H_
+#define NRF52_CLOCK_H_
 
 #include "nrf.h"
 
@@ -84,7 +84,7 @@ static inline void power_mode_low_power(){
 	NRF_POWER->TASKS_LOWPWR = 1;
 }
 
-#endif /* CLOCK_INIT_H_ */
+#endif /* NRF52_CLOCK_H_ */
 /**
  * @}
  * @}

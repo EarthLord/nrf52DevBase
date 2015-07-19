@@ -1,4 +1,4 @@
-/* 	Copyright (c) 2014, Prithvi Raj Narendra
+/* 	Copyright (c) 2015, Prithvi Raj Narendra
  *	All rights reserved.
  *
  *	Redistribution and use in source and binary forms, with or without modification,
@@ -28,45 +28,31 @@
  */
 
 /**
- * @addtogroup hf-timer
+ * @addtogroup peripheral-drivers
+ * @{
+ *
+ * @defgroup Randon-Num Random Number Generator
+ * Driver to use the Random Number Generator peripheral to generate random numbers
  * @{
  *
  * @file
- * This file contains the implementation for profiling and time-stamping timer using TIMER0 peripheral
+ * This file contains the declarations for using the Random Number Generator to get
+ * the specifed number of bytes of random values.
+ *
  * @author
  * Prithvi
  */
 
-#include "nrf52-timer0.h"
-#include "nrf52-clock.h"
-#include "tfp_printf.h"
+#ifndef NRF52_RNG_H_
+#define NRF52_RNG_H_
 
+#include <stdint.h>
 
-void profile_timer_init(void){
-	/* Initialize the HF clock if it is not already running*/
-	hfclk_xtal_init();
-
-    NRF_TIMER0->TASKS_STOP	   = 1;                    		// Stop timer.
-	NRF_TIMER0->MODE           = TIMER_MODE_MODE_Timer;  	// Set the timer in Timer Mode.
-	NRF_TIMER0->PRESCALER      = TIMER0_PRESCALER;			// Prescaler 0 produces 16 MHz.
-	NRF_TIMER0->BITMODE        = TIMER0_BITSIZE;  			// 32 bit mode.
-	NRF_TIMER0->TASKS_CLEAR    = 1;                         // clear the task first to be usable for later.
-
-    NRF_TIMER0->TASKS_START   = 1;                    		// Start timer.
-}
-
-void printfcomma (uint32_t num) {
-    if (num < 1000) {
-        tfp_printf ("%d", (int)num);
-        return;
-    }
-    printfcomma (num/1000);
-    tfp_printf (",%03d",(int) num%1000);
-}
-
-void profile_timer_stop(void){
-    NRF_TIMER0->TASKS_STOP	   = 1;                    		// Stop timer.
-}
 /**
- * @}
+ * @brief Gets a specified number octets of random values
+ * @param rng_buf_ptr Pointer to the unsigned char buffer where the random values are stored
+ * @param rng_buf_len The number of octets to be generated
  */
+void rng_get_bytes(uint8_t * rng_buf_ptr, uint32_t rng_buf_len);
+
+#endif /* NRF52_RNG_H_ */

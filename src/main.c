@@ -45,6 +45,8 @@
 #include "nrf52-uart.h"
 #include "nrf52-rtc1.h"
 #include "nrf52-timer0.h"
+#include "nrf52-timer1.h"
+#include "nrf52-rng.h"
 
 static void timer_handler(void){
 	nrf_gpio_pin_toggle(LED1);
@@ -59,6 +61,14 @@ PROFILE_START;
 //	tfp_printf("0000000000111111111122222222223333333333444444444455555555556666666666777777777788888888889999999999\n");
 //	tfp_printf("AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFFFFFFFGGGGGGGGGGHHHHHHHHHHIIIIIIIIIIJJJJJJJJJJ\n");
 PROFILE_STOP;
+}
+
+void us_timer_handler(void){
+//PROFILE_START;
+	uint8_t buf[3];
+	rng_get_bytes(buf,3);
+	tfp_printf("%d %d %d\n", buf[0], buf[1], buf[2]);
+//PROFILE_STOP;
 }
 
 /**
@@ -76,10 +86,13 @@ int main(void)
 
 	uart_init();
 	ms_timer_init();
-	timer_init();
-	start_ms_timer(MS_TIMER0, REPEATED_CALL, RTC_TICKS(1000), timer_handler);
+	us_timer_init();
+	profile_timer_init();
+
+	start_us_timer(US_TIMER0, US_REPEATED_CALL, 104729, us_timer_handler);
+	start_ms_timer(MS_TIMER0, MS_REPEATED_CALL, RTC_TICKS(1000), timer_handler);
 
     while (true){
-    	__WFI();
+    	//__WFI();
     }
 }

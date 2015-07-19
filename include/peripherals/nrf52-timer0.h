@@ -42,16 +42,16 @@
  *
  */
 
-#ifndef TIMER_H_
-#define TIMER_H_
+#ifndef NRF52_TIMER0_H_
+#define NRF52_TIMER0_H_
 
 #include <stdint.h>
 #include "nrf.h"
 
 /** Prescalar to the HF Clock for the TIMER0 peripheral based on f = HFCLK/(2^prescaler) */
-#define TIMER_PRESCALER 0
+#define TIMER0_PRESCALER 0
 /** Number of bits in the timer. TIMER 1 and 2 can only be 8 or 16 bit */
-#define TIMER_BITSIZE 	TIMER_BITMODE_BITMODE_32Bit
+#define TIMER0_BITSIZE 	TIMER_BITMODE_BITMODE_32Bit
 
 /** Print the current time in micro-seconds from the startup (beginning of TIMER0).
  * This is used for time stamping at different parts in the code
@@ -74,7 +74,7 @@
 /** @} */
 
 /** Initialize the Timer using TIMER0 using @ref TIMER_PRESCALER and @ref TIMER_BITSIZE */
-void timer_init(void);
+void profile_timer_init(void);
 /**
  * Takes in an unsigned integer and prints it with a ',' after every three digits
  * @param num	Number to be printed with commas
@@ -91,7 +91,14 @@ inline uint32_t read_time_us(void){
 	NRF_TIMER0->TASKS_CAPTURE[3] = 1;
 	return(NRF_TIMER0->CC[3]/16);
 }
-#endif /* TIMER_H_ */
+
+/**
+ * Stop the profile timer to save power
+ * Remember to call initialization function again before profiling
+ */
+void profile_timer_stop(void);
+
+#endif /* NRF52_TIMER0_H_ */
 /**
  * @}
  * @}

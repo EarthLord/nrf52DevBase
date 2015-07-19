@@ -42,8 +42,8 @@
  * Prithvi
  */
 
-#ifndef UART_NRF_H
-#define UART_NRF_H
+#ifndef NRF52_UART_H
+#define NRF52_UART_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -57,7 +57,7 @@
  */
 void uart_init(void);
 
-#endif
+#endif /* NRF52_UART_H */
 /**
  * @}
  * @}
