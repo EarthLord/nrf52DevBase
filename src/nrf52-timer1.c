@@ -68,6 +68,11 @@ void stop_us_timer(us_timer_num id){
 	NRF_TIMER1->INTENCLR 		= 1 << (TIMER_INTENSET_COMPARE0_Pos + id);
 }
 
+void us_timer_deinit(){
+    NRF_TIMER1->TASKS_STOP	   		= 1;               		// Stop timer.
+    NRF_TIMER1->TASKS_SHUTDOWN	   	= 1;               		// Fully stop timer.
+}
+
 bool is_us_timer_on(us_timer_num id){
 	return ((us_timers_status & (1<<id)) != 0);
 }
@@ -75,8 +80,7 @@ bool is_us_timer_on(us_timer_num id){
 /** @brief Function for handling the RTC1 interrupts.
  * Triggered Compare register of timer ID
  */
-void
-TIMER1_IRQHandler(){
+void TIMER1_IRQHandler(){
 	for(us_timer_num id = US_TIMER0; id < US_TIMER_MAX; id++){
 		if(NRF_TIMER1->EVENTS_COMPARE[id]){
 			NRF_TIMER1->EVENTS_COMPARE[id] = 0;

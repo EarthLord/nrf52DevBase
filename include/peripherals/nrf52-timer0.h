@@ -75,6 +75,7 @@
 
 /** Initialize the Timer using TIMER0 using @ref TIMER_PRESCALER and @ref TIMER_BITSIZE */
 void profile_timer_init(void);
+
 /**
  * Takes in an unsigned integer and prints it with a ',' after every three digits
  * @param num	Number to be printed with commas
@@ -92,11 +93,10 @@ inline uint32_t read_time_us(void){
 	return(NRF_TIMER0->CC[3]/16);
 }
 
-/**
- * Stop the profile timer to save power
- * Remember to call initialization function again before profiling
+/** @brief Fully stop the profiling timer (TIMER0) to save power. @ref profile_timer_init
+ *  	needs to be called again before using it.
  */
-void profile_timer_stop(void);
+void profile_timer_deinit();
 
 #endif /* NRF52_TIMER0_H_ */
 /**

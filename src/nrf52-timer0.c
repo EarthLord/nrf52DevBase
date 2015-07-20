@@ -41,6 +41,7 @@
 #include "nrf52-clock.h"
 #include "tfp_printf.h"
 
+//TODO Add state and checks to see if timer is on before using it
 
 void profile_timer_init(void){
 	/* Initialize the HF clock if it is not already running*/
@@ -55,6 +56,11 @@ void profile_timer_init(void){
     NRF_TIMER0->TASKS_START   = 1;                    		// Start timer.
 }
 
+void profile_timer_deinit(){
+    NRF_TIMER0->TASKS_STOP	   		= 1;               		// Stop timer.
+    NRF_TIMER0->TASKS_SHUTDOWN	   	= 1;               		// Fully stop timer.
+}
+
 void printfcomma (uint32_t num) {
     if (num < 1000) {
         tfp_printf ("%d", (int)num);
@@ -64,9 +70,6 @@ void printfcomma (uint32_t num) {
     tfp_printf (",%03d",(int) num%1000);
 }
 
-void profile_timer_stop(void){
-    NRF_TIMER0->TASKS_STOP	   = 1;                    		// Stop timer.
-}
 /**
  * @}
  */

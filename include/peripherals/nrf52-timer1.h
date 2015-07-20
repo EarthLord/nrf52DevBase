@@ -103,5 +103,10 @@ void stop_us_timer(us_timer_num id);
  */
 bool is_us_timer_on(us_timer_num id);
 
+/**
+ * @brief Fully stop the microsecond timer (TIMER1) to save power. @ref us_timer_init
+ *  	needs to be called again before using it.
+ */
+void us_timer_deinit();
 
 #endif /* NRF52_TIMER1_H_ */
