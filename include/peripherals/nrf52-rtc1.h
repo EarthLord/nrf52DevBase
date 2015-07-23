@@ -60,7 +60,11 @@
 /** Prescalar to the LF Clock for the RTC peripheral based on f = LFCLK/(prescaler + 1) */
 #define RTC_PRESCALER         		((LFCLK_FREQUENCY/RTC_FREQUENCY) - 1)
 /** Calculation to findout the number of RTC ticks for the passed time in milli-seconds */
-#define RTC_TICKS(ms)				((uint32_t) DIV_ROUNDED( (RTC_FREQUENCY*ms) , 1000) )
+#define RTC_TICKS_MS(ms)				((uint32_t) DIV_ROUNDED( (RTC_FREQUENCY*ms) , 1000) )
+/** Calculation to findout the number of RTC ticks for the passed time in multiples of 0.625 ms */
+#define RTC_TICKS_625(ms)				((uint32_t) DIV_ROUNDED( (RTC_FREQUENCY*ms) , 1600) )
+/** Calculation to findout the number of RTC ticks for the passed time in multiples of 1.25 ms */
+#define RTC_TICKS_1250(ms)				((uint32_t) DIV_ROUNDED( (RTC_FREQUENCY*ms) , 800) )
 
 /**
  * @enum timer_num
