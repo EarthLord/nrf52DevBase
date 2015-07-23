@@ -47,7 +47,7 @@
  */
 static struct ms_timer_t{
 	volatile uint32_t timer_mode;
-	volatile void (*timer_handler)(void);
+	void (*timer_handler)(void);
 }ms_timer[MS_TIMER_MAX];
 
 /** Timers currently used based on the first four bits from LSB */
@@ -97,7 +97,6 @@ void start_ms_timer(ms_timer_num id, ms_timer_mode mode, uint32_t ticks, void (*
 
 void stop_ms_timer(ms_timer_num id){
 	ms_timer[id].timer_mode  = MS_SINGLE_CALL;
-	ms_timer[id].timer_handler = NULL;
 	ms_timers_status &= ~(1 << id);
 	NRF_RTC1->EVTENCLR 		= 1 << (RTC_INTENSET_COMPARE0_Pos + id);
 	NRF_RTC1->INTENCLR 		= 1 << (RTC_INTENSET_COMPARE0_Pos + id);

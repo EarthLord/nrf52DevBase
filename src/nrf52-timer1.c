@@ -16,7 +16,7 @@
  */
 static struct us_timer_t{
 	volatile uint32_t timer_mode;
-	volatile void (*timer_handler)(void);
+	void (*timer_handler)(void);
 }us_timer[US_TIMER_MAX];
 
 /** Timers currently used based on the first four bits from LSB */
@@ -62,7 +62,6 @@ void start_us_timer(us_timer_num id, us_timer_mode mode, uint32_t ticks, void (*
 
 void stop_us_timer(us_timer_num id){
 	us_timer[id].timer_mode  = US_SINGLE_CALL;
-	us_timer[id].timer_handler = NULL;
 	us_timers_status &= ~(1 << id);
 
 	NRF_TIMER1->INTENCLR 		= 1 << (TIMER_INTENSET_COMPARE0_Pos + id);
