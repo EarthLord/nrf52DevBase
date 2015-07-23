@@ -122,7 +122,7 @@ static void start_uart_tx(uart_buffers tx_buf){
 
 /**
  */
-void printf_callback(void* str_end, int8_t ch){
+void printf_callback(void* str_end, char ch){
 	uart_buffers current_buf = PONG, other_buf = PING;
 	if((BUF_STATE[PING].TX == uart_ctx.tx_state)||
 			(BUF_STATE[PING].DONE == uart_ctx.tx_state)){
