@@ -47,28 +47,13 @@
 #include "nrf52-timer0.h"
 #include "nrf52-timer1.h"
 #include "nrf52-rng.h"
+#include "link-layer.h"
+#include "ble.h"
+//#include "stdio.h"
 
-static void timer_handler(void){
-	nrf_gpio_pin_toggle(LED1);
-PROFILE_START;
-	tfp_printf("a111 b222 c333 d444\n");
-	tfp_printf("abcde\n");
-	tfp_printf("wxyz\n");
-	tfp_printf("another one to test this uart implementation\n");
-	tfp_printf("this is not the last one\n");
-	tfp_printf("more are needed to see where the bug is\n");
-//	nrf_delay_ms(120);
-//	tfp_printf("0000000000111111111122222222223333333333444444444455555555556666666666777777777788888888889999999999\n");
-//	tfp_printf("AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFFFFFFFGGGGGGGGGGHHHHHHHHHHIIIIIIIIIIJJJJJJJJJJ\n");
-PROFILE_STOP;
-}
-
-void us_timer_handler(void){
-//PROFILE_START;
-	uint8_t buf[3];
-	rng_get_bytes(buf,3);
-	tfp_printf("%d %d %d\n", buf[0], buf[1], buf[2]);
-//PROFILE_STOP;
+static void log_dump_handler(void){
+	dump_log();
+//	printf("kjfa");
 }
 
 /**
@@ -76,6 +61,17 @@ void us_timer_handler(void){
  */
 int main(void)
 {
+	uint8_t adrs[] = {0x0B, 0x0E, 0x0A, 0x0C, 0x00, 0x01};
+	uint8_t data[] = {
+			0x02,
+			GAP_ADV_FLAGS,
+			0x04,
+			0x08,						/* AD Length */
+			GAP_ADV_NAME_FULL,										/* AD Type */
+			'B', 'l', 'e', 's', 's', 'e', 'd'};
+
+	adv_param_t param = {800, ADV_NONCONN_IND_PARAM, RANDOM_ADRS_PARAM, CH_38_PARAM};
+
 	hfclk_xtal_init();
 	lfclk_init();
 
@@ -89,8 +85,14 @@ int main(void)
 	us_timer_init();
 	profile_timer_init();
 
-	start_us_timer(US_TIMER0, US_REPEATED_CALL, 104729, us_timer_handler);
-	start_ms_timer(MS_TIMER0, MS_REPEATED_CALL, RTC_TICKS(1000), timer_handler);
+	ll_set_random_adrs(adrs);
+	ll_set_adv_tx_power(-20);
+	ll_set_adv_data(sizeof(data), data);
+	ll_set_adv_param(&param);
+
+	ll_start_adv();
+
+	start_ms_timer(MS_TIMER0, MS_REPEATED_CALL, RTC_TICKS_MS(1027), log_dump_handler);
 
     while (true){
     	//__WFI();
