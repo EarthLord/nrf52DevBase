@@ -32,11 +32,11 @@ void us_timer_init(void){
 	}
 	us_timers_status = 0;
 
-    NRF_TIMER1->TASKS_STOP	   	= 1;                    		// Stop timer.
+    NRF_TIMER1->TASKS_STOP	   	= 1;                    	// Stop timer.
 	NRF_TIMER1->MODE           	= TIMER_MODE_MODE_Timer;  	// Set the timer in Timer Mode.
-	NRF_TIMER1->PRESCALER      	= TIMER1_PRESCALER;			// Prescaler 0 produces 16 MHz.
+	NRF_TIMER1->PRESCALER      	= TIMER1_PRESCALER;			// Prescaler 4 produces 1 MHz.
 	NRF_TIMER1->BITMODE        	= TIMER1_BITSIZE;  			// 32 bit mode.
-	NRF_TIMER1->TASKS_CLEAR    	= 1;                         // clear the Timer first to be usable for later.
+	NRF_TIMER1->TASKS_CLEAR    	= 1;                        // clear the Timer first to be usable for later.
 	NRF_TIMER1->TASKS_START 	= 1;
 
 	NVIC_SetPriority(TIMER1_IRQn, PRIORITY_TIMER1_IRQn);
