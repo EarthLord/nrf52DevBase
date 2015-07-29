@@ -128,4 +128,8 @@ inline void ll_set_adv_data(uint8_t len, uint8_t* data_ptr){
 	radio_set_adv_data(len, data_ptr);
 }
 
+inline void ll_set_scan_rsp_data(uint8_t len, uint8_t* data_ptr){
+	radio_set_scan_rsp_data(len, data_ptr);
+}
+
 #endif /* LINK_LAYER_H_ */

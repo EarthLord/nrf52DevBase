@@ -45,13 +45,13 @@
 
 typedef struct  {
 	uint32_t time;
+	const char* func_name;
 	uint8_t radio_state;
 	uint8_t	radio_ctx_state;
 	uint8_t freq;
-	uint8_t dummy2;
 }log_t;
 
-void dump_log();
+void dump_log(void);
 
 #else
 
@@ -70,7 +70,8 @@ typedef enum{
 	 SCAN_REQ,			// Scan request from scanner
 	 SCAN_RSP,			// Scan response from advertiser
 	 CONNECT_REQ,		// Connect request from initiator
-	 ADV_SCAN_IND 		// Scannable undirected advertising
+	 ADV_SCAN_IND, 		// Scannable undirected advertising
+	 ADV_PDU_MASK
 }adv_pdu_types_t;
 
 typedef enum {

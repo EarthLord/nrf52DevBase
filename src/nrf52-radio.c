@@ -63,10 +63,18 @@ static inline void adv_set_ch_freq();
 #define ADV_IDX_CH_37				0
 #define ADV_IDX_CH_38				1
 #define ADV_IDX_CH_39				2
+#define ADV_IDX_CH_MAX				3
 
-#define BASE_SHORTS							\
-		(RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos)		\
-		| (RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos)
+#define TIME_TO_RX_ACCESS_ADRS		200
+
+#define SHORT_READY_START			\
+		(RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos)
+#define SHORT_END_DIS				\
+		(RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos)
+#define SHORT_DIS_TXEN				\
+		(RADIO_SHORTS_DISABLED_TXEN_Enabled << RADIO_SHORTS_DISABLED_TXEN_Pos)
+#define SHORT_DIS_RXEN				\
+		(RADIO_SHORTS_DISABLED_RXEN_Enabled << RADIO_SHORTS_DISABLED_RXEN_Pos)
 
 const int8_t radio_pwr_levels[] = {4, 3, 0, -4, -8, -12, -16, -20, -40};
 
@@ -74,50 +82,80 @@ const uint8_t adv_channels[] = {37, 38, 39};
 const uint8_t adv_freq[] = {2, 26, 80};
 
 void irq_null_end(void);
-void irq_adv_nc_end(void);
+//void irq_adv_nc_end(void);
+//void irq_adv_tx_end(void);
+//void irq_adv_rx_end(void);
+void irq_scan_end(void);
 
 void irq_null_dis(void);
 void irq_adv_nc_dis(void);
+void irq_adv_tx_dis(void);
+void irq_adv_rx_dis(void);
+void irq_scan_dis(void);
+
+//void irq_scan_ready(void);
+//void irq_adv_tx_ready(void);
 
 typedef enum{
 	STOP,
 	ADV_NC,
+	ADV_TX,
+	ADV_RX,
+	SCAN
 }radio_states;
+
+//void (*ready_handler[])(void) = {
+//	irq_null_end,				//IDLE
+//	irq_null_end,				//ADV_NC
+//	irq_adv_tx_ready,			//ADV_TX
+//	irq_null_end,				//ADV_RX
+//	irq_scan_ready				//SCAN
+//};
 
 void (*end_handler[])(void) = {
 	irq_null_end,				//IDLE
-	irq_adv_nc_end				//ADV_NC
+	irq_null_end,				//ADV_NC
+	irq_null_end,				//ADV_TX
+	irq_null_end,				//ADV_RX
+	irq_scan_end				//SCAN
 };
 
 void (*dis_handler[])(void) = {
 	irq_null_dis,				//IDLE
-	irq_adv_nc_dis				//ADV_NC
+	irq_adv_nc_dis,				//ADV_NC
+	irq_adv_tx_dis,				//ADV_TX
+	irq_adv_rx_dis,				//ADV_RX
+	irq_scan_dis				//SCAN
 };
 
 static struct radio_context {
 	/** Radio specific **/
-	radio_states state;					//4 bytes
-	uint8_t adv_buf[MAX_RADIO_PDU];		//39 bytes
+	volatile radio_states state;			//4 bytes
+	uint8_t adv_txbuf[MAX_RADIO_PDU];		//39 bytes
+	uint8_t adv_rxbuf[MAX_RADIO_PDU];		//39 bytes
+	uint8_t scan_rsp[MAX_RADIO_PDU];		//39 bytes
 
 	/**General**/
-	uint8_t adrs_type;					//1 bytes
+	uint8_t adrs_type;					//1 byte
 	uint8_t MAC_adrs[ADRS_LEN];			//6 bytes
 
 	/**Advertisement**/
-	uint8_t adv_type;					//1 bytes
-	uint8_t adv_ch_map;					//1 bytes
-	int8_t adv_pwr;						//1 bytes
-	volatile uint8_t adv_idx;			//1 bytes
+	uint8_t adv_type;					//1 byte
+	uint8_t adv_ch_map[3];				//3 bytes
+	int8_t adv_pwr;						//1 byte
+	volatile uint8_t adv_idx;			//1 byte
+	volatile bool is_scan;				//1 byte
 } radio_ctx;
 
 #ifdef DEBUG
-void add_log(void);
+void add_log(const char* func_name);
 volatile uint32_t log_cnt = LOG_BUFFER_SIZE-1;
 volatile log_t log_buf[LOG_BUFFER_SIZE];
 
-void add_log(void){
+void add_log(const char * func_name){
 	if(log_cnt){
 		log_buf[log_cnt].time =read_time_us();
+		log_buf[log_cnt].func_name = func_name;
 		log_buf[log_cnt].radio_state =  NRF_RADIO->STATE;
 		log_buf[log_cnt].radio_ctx_state = radio_ctx.state;
 		log_buf[log_cnt].freq = radio_ctx.adv_idx;
@@ -128,11 +166,11 @@ void add_log(void){
 void dump_log(){
 	uint32_t i;
 	for(i = LOG_BUFFER_SIZE-1; i>log_cnt;i--){
-		tfp_printf("Time:");
+		tfp_printf("T:");
 		printfcomma(log_buf[i].time);
-		tfp_printf("; HwState:%d; SwState:%d; Freq:%d\n",
+		tfp_printf("; Hw:%d; Sw:%d; Fq:%d F:%s\n",
 				log_buf[i].radio_state, log_buf[i].radio_ctx_state,
-				log_buf[i].freq);
+				log_buf[i].freq, log_buf[i].func_name);
 	}
 	log_cnt = LOG_BUFFER_SIZE-1;
 }
@@ -145,7 +183,9 @@ void dump_log(void){}
 
 void radio_set_adv_param(radio_adv_param_t * adv_param){
 	radio_ctx.adv_type = adv_param->adv_type;
-	radio_ctx.adv_ch_map = adv_param->adv_ch_map;
+	radio_ctx.adv_ch_map[ADV_IDX_CH_37] = (adv_param->adv_ch_map & 0x01);
+	radio_ctx.adv_ch_map[ADV_IDX_CH_38] = (adv_param->adv_ch_map>>1) & 0x01;
+	radio_ctx.adv_ch_map[ADV_IDX_CH_39] = (adv_param->adv_ch_map>>2) & 0x01;
 	radio_ctx.adrs_type = adv_param->own_adrs_type;
 }
 
@@ -171,23 +211,27 @@ void radio_set_random_adrs(uint8_t * rand_adrs){
 }
 
 void radio_set_adv_data(uint8_t len, uint8_t* data_ptr){
-	memcpy(radio_ctx.adv_buf + ADV_PAYLOAD_OFFSET, data_ptr, len);
-	radio_ctx.adv_buf[ADV_HEADER_LEN_OFFSET] = len + ADRS_LEN;
+	memcpy(radio_ctx.adv_txbuf + ADV_PAYLOAD_OFFSET, data_ptr, len);
+	radio_ctx.adv_txbuf[ADV_HEADER_LEN_OFFSET] = len + ADRS_LEN;
+}
+
+void radio_set_scan_rsp_data(uint8_t len, uint8_t* data_ptr){
+	memcpy(radio_ctx.scan_rsp + ADV_PAYLOAD_OFFSET, data_ptr, len);
+	radio_ctx.scan_rsp[ADV_HEADER_LEN_OFFSET] = len + ADRS_LEN;
 }
 
 static inline void adv_set_ch_freq(){
-	//TODO Change for data channels
 	NRF_RADIO->DATAWHITEIV = adv_channels[radio_ctx.adv_idx];
 	NRF_RADIO->FREQUENCY = adv_freq[radio_ctx.adv_idx];
 }
 
 void radio_prepare_adv(void)
 {
-	if(radio_ctx.adv_ch_map & (1<<ADV_IDX_CH_37)){
+	if(radio_ctx.adv_ch_map[ADV_IDX_CH_37]){
 		radio_ctx.adv_idx = ADV_IDX_CH_37;
-	} else if(radio_ctx.adv_ch_map & (1<<ADV_IDX_CH_38)){
+	} else if(radio_ctx.adv_ch_map[ADV_IDX_CH_38]){
 		radio_ctx.adv_idx = ADV_IDX_CH_38;
-	} else if(radio_ctx.adv_ch_map & (1<<ADV_IDX_CH_39)){
+	} else if(radio_ctx.adv_ch_map[ADV_IDX_CH_39]){
 		radio_ctx.adv_idx = ADV_IDX_CH_39;
 	}
 
@@ -198,19 +242,42 @@ void radio_prepare_adv(void)
 	NRF_RADIO->CRCINIT = ADV_CRC_INIT;
 	NRF_RADIO->TXPOWER = radio_ctx.adv_pwr;
 
-	radio_ctx.adv_buf[ADV_HEADER_PDU_OFFSET] = radio_ctx.adv_type;
-	radio_ctx.adv_buf[ADV_HEADER_PDU_OFFSET] |=
+	radio_ctx.adv_txbuf[ADV_HEADER_PDU_OFFSET] = radio_ctx.adv_type;
+	radio_ctx.adv_txbuf[ADV_HEADER_PDU_OFFSET] |=
 			(radio_ctx.adrs_type & 0x01) << ADV_TX_ADRS_TYPE_BIT_POS;
 
-	memcpy(radio_ctx.adv_buf + ADV_ADRS_OFFSET, radio_ctx.MAC_adrs, ADRS_LEN);
+	memcpy(radio_ctx.adv_txbuf + ADV_ADRS_OFFSET, radio_ctx.MAC_adrs, ADRS_LEN);
 
-	NRF_RADIO->PACKETPTR = (uint32_t) radio_ctx.adv_buf;
+	radio_ctx.scan_rsp[ADV_HEADER_PDU_OFFSET] = SCAN_RSP;
+	radio_ctx.scan_rsp[ADV_HEADER_PDU_OFFSET] |=
+			(radio_ctx.adrs_type & 0x01) << ADV_TX_ADRS_TYPE_BIT_POS;
+
+	memcpy(radio_ctx.scan_rsp + ADV_ADRS_OFFSET, radio_ctx.MAC_adrs, ADRS_LEN);
 
 	radio_ctx.state = STOP;
 }
 
 void radio_send_adv(void){
-	radio_ctx.state = ADV_NC;
+	switch(radio_ctx.adv_type){
+		case ADV_IND:
+		case ADV_DIRECT_IND:
+		case ADV_SCAN_IND:
+			radio_ctx.state = ADV_TX;
+			NRF_RADIO->SHORTS = SHORT_READY_START | SHORT_END_DIS | SHORT_DIS_RXEN;
+			break;
+		case ADV_NONCONN_IND:
+			radio_ctx.state = ADV_NC;
+			break;
+		case SCAN_REQ:
+		case SCAN_RSP:
+		case CONNECT_REQ:
+		default:
+			break;
+	}
+
+
+	NRF_RADIO->PACKETPTR = (uint32_t) radio_ctx.adv_txbuf;
+
 	NRF_RADIO->TASKS_TXEN = 1UL;
 }
 
@@ -220,6 +287,10 @@ void radio_init(void){
 	/************ Refer nrf52 manual instead of nrf51 *************/
 
 	NRF_RADIO->POWER = RADIO_POWER_POWER_Enabled;
+
+	/* Enable the fast startup (nrf52 only)*/
+//	NRF_RADIO->MODECNF0 = (RADIO_MODECNF0_DTX_Center << RADIO_MODECNF0_DTX_Pos)
+//									| (RADIO_MODECNF0_RU_Fast);
 
 	/* nRF51 Series Reference Manual v2.1, section 6.1.1, page 18
 	 * PCN-083 rev.1.1
@@ -299,7 +370,7 @@ void radio_init(void){
 	 * Enable END_DISABLE short: when the END event happens, initialize the
 	 * DISABLE task.
 	 */
-	NRF_RADIO->SHORTS = BASE_SHORTS;
+	NRF_RADIO->SHORTS = SHORT_READY_START | SHORT_END_DIS;
 
 	/* Trigger RADIO interruption when an DISABLE or END event happens */
 	NRF_RADIO->INTENSET = RADIO_INTENSET_END_Msk | RADIO_INTENSET_DISABLED_Msk;
@@ -311,56 +382,130 @@ void radio_init(void){
 
 void radio_deinit(void){
 	radio_ctx.state = STOP;
-	NRF_RADIO->POWER = RADIO_POWER_POWER_Disabled;
+	NRF_RADIO->TASKS_DISABLE = 1;
+	//NRF_RADIO->POWER = RADIO_POWER_POWER_Disabled;
+}
+
+bool check_set_ch_idx(){
+	radio_ctx.adv_idx++;
+
+	while(ADV_IDX_CH_MAX != radio_ctx.adv_idx){
+		if(radio_ctx.adv_ch_map[radio_ctx.adv_idx]){
+			return true;
+		} else {
+			radio_ctx.adv_idx++;
+		}
+	}
+
+	radio_deinit();
+	return false;
+}
+
+void rx_timer_handler(void){
+//	add_log(__func__);
+	//Check if a packet reception has started
+	if(NRF_RADIO->EVENTS_ADDRESS){
+		//Check if the packet received is for a scan request
+		if((SCAN_REQ == (radio_ctx.adv_rxbuf[ADV_HEADER_PDU_OFFSET] & ADV_PDU_MASK))
+			/*	&& ((2*ADRS_LEN) == radio_ctx.adv_rxbuf[ADV_HEADER_LEN_OFFSET]) */){
+//			add_log(__func__);
+			radio_ctx.is_scan = true;
+			NRF_RADIO->SHORTS = SHORT_READY_START | SHORT_END_DIS | SHORT_DIS_TXEN;
+		}
+	} else {
+		NRF_RADIO->TASKS_DISABLE = 1;
+	}
 }
 
 void irq_null_end(void){}
 void irq_null_dis(void){}
 
-void irq_adv_nc_end(void){
-	//add_log();
+void irq_scan_end(void){
+//	add_log(__func__);
+	NRF_RADIO->SHORTS = SHORT_READY_START | SHORT_END_DIS;
 }
 
+void irq_adv_tx_dis(void){
+//	add_log(__func__);
+
+	//150 us for IFS and 100 us time to see if the address event has been
+	//generated by receiving a packet
+	start_us_timer(US_TIMER0, US_SINGLE_CALL,
+					TIME_TO_RX_ACCESS_ADRS, rx_timer_handler);
+
+	NRF_RADIO->PACKETPTR = (uint32_t) radio_ctx.adv_rxbuf;
+	NRF_RADIO->EVENTS_ADDRESS = 0;
+
+	NRF_RADIO->SHORTS = SHORT_READY_START | SHORT_END_DIS;
+	radio_ctx.state = ADV_RX;
+
+	memset(radio_ctx.adv_rxbuf,0,MAX_RADIO_PDU);
+
+	radio_ctx.is_scan = false;
+}
+
+void irq_adv_rx_dis(void){
+
+	if(radio_ctx.is_scan){
+//		add_log(__func__);
+		radio_ctx.state = SCAN;
+		NRF_RADIO->PACKETPTR = (uint32_t) radio_ctx.scan_rsp;
+	} else {
+		if(check_set_ch_idx()){
+			adv_set_ch_freq();
+
+			radio_ctx.state = ADV_TX;
+			NRF_RADIO->SHORTS = SHORT_READY_START | SHORT_END_DIS | SHORT_DIS_RXEN;
+
+			NRF_RADIO->PACKETPTR = (uint32_t) radio_ctx.adv_txbuf;
+			NRF_RADIO->TASKS_TXEN = 1UL;
+		}
+	}
+}
+
+void irq_scan_dis(void){
+//	add_log(__func__);
+
+	if(check_set_ch_idx()){
+		adv_set_ch_freq();
+
+		radio_ctx.state = ADV_TX;
+		NRF_RADIO->SHORTS = SHORT_READY_START | SHORT_END_DIS | SHORT_DIS_RXEN;
+
+		NRF_RADIO->PACKETPTR = (uint32_t) radio_ctx.adv_txbuf;
+		NRF_RADIO->TASKS_TXEN = 1UL;
+	}
+}
 
 void irq_adv_nc_dis(void){
-	add_log();
+//	add_log(__func__);
 
-	switch(radio_ctx.adv_idx){
-		case ADV_IDX_CH_37:
-			if(radio_ctx.adv_ch_map & (1<<ADV_IDX_CH_38)){
-				radio_ctx.adv_idx = ADV_IDX_CH_38;
-			} else if(radio_ctx.adv_ch_map & (1<<ADV_IDX_CH_39)){
-				radio_ctx.adv_idx = ADV_IDX_CH_39;
-			} else {
-				radio_deinit();
-				return;
-			}
-			break;
-		case ADV_IDX_CH_38:
-			if(radio_ctx.adv_ch_map & (1<<ADV_IDX_CH_39)){
-				radio_ctx.adv_idx = ADV_IDX_CH_39;
-			} else {
-				radio_deinit();
-				return;
-			}
-			break;
-		case ADV_IDX_CH_39:
-		default:
-			radio_deinit();
-			return;
-			break;
+	if(check_set_ch_idx()){
+		adv_set_ch_freq();
+		NRF_RADIO->TASKS_TXEN = 1UL;
 	}
-
-	adv_set_ch_freq();
-	NRF_RADIO->TASKS_TXEN = 1UL;
 }
 
+void irq_scan_ready(void){
+//	add_log(__func__);
+}
+
+void irq_adv_tx_ready(void){
+//	add_log(__func__);
+}
 
 void RADIO_IRQHandler(void){
-	if(1 == NRF_RADIO->EVENTS_RSSIEND){
-		NRF_RADIO->EVENTS_RSSIEND = 0;
-		(void) NRF_RADIO->EVENTS_RSSIEND;
-	}
+
+//	if(1 == NRF_RADIO->EVENTS_READY){
+//		NRF_RADIO->EVENTS_READY = 0;
+//		(void) NRF_RADIO->EVENTS_READY;
+//		ready_handler[radio_ctx.state]();
+//	}
+
+//	if(1 == NRF_RADIO->EVENTS_RSSIEND){
+//		NRF_RADIO->EVENTS_RSSIEND = 0;
+//		(void) NRF_RADIO->EVENTS_RSSIEND;
+//	}
 
 	if(1 == NRF_RADIO->EVENTS_END){
 		NRF_RADIO->EVENTS_END = 0;
@@ -373,5 +518,7 @@ void RADIO_IRQHandler(void){
 		(void) NRF_RADIO->EVENTS_DISABLED;
 		dis_handler[radio_ctx.state]();
 	}
+
+
 }
 

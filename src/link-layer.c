@@ -67,12 +67,12 @@ void ll_set_adv_param(adv_param_t * adv_param){
 }
 
 void adv_intvl_handler(void){
-	radio_init();
 	radio_prepare_adv();
 	radio_send_adv();
 }
 
 void ll_start_adv(void){
+	radio_init();
 	start_ms_timer(MS_TIMER1, MS_REPEATED_CALL, RTC_TICKS_625(ll_ctx.adv_intvl), adv_intvl_handler);
 	adv_intvl_handler();
 }

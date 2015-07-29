@@ -49,11 +49,9 @@
 #include "nrf52-rng.h"
 #include "link-layer.h"
 #include "ble.h"
-//#include "stdio.h"
 
 static void log_dump_handler(void){
 	dump_log();
-//	printf("kjfa");
 }
 
 /**
@@ -62,15 +60,16 @@ static void log_dump_handler(void){
 int main(void)
 {
 	uint8_t adrs[] = {0x0B, 0x0E, 0x0A, 0x0C, 0x00, 0x01};
-	uint8_t data[] = {
-			0x02,
-			GAP_ADV_FLAGS,
-			0x04,
-			0x08,						/* AD Length */
-			GAP_ADV_NAME_FULL,										/* AD Type */
-			'B', 'l', 'e', 's', 's', 'e', 'd'};
+	uint8_t adv_data[] = {
+			/* Len, type, data */
+			0x02, GAP_ADV_FLAGS, 0x04,
+			0x08, GAP_ADV_NAME_FULL, 'B', 'l', 'e', 's', 's', 'e', 'd'};
 
-	adv_param_t param = {800, ADV_NONCONN_IND_PARAM, RANDOM_ADRS_PARAM, CH_38_PARAM};
+	uint8_t scan_rsp[] = {
+			0x02, GAP_ADV_TRANSMIT_PWR, 0
+	};
+
+	adv_param_t param = {800, ADV_SCAN_IND_PARAM, RANDOM_ADRS_PARAM, CH_ALL_PARAM};
 
 	hfclk_xtal_init();
 	lfclk_init();
@@ -85,16 +84,19 @@ int main(void)
 	us_timer_init();
 	profile_timer_init();
 
+	tfp_printf("hello\n");
+
 	ll_set_random_adrs(adrs);
-	ll_set_adv_tx_power(-20);
-	ll_set_adv_data(sizeof(data), data);
+	ll_set_adv_tx_power(0);
+	ll_set_adv_data(sizeof(adv_data), adv_data);
 	ll_set_adv_param(&param);
+	ll_set_scan_rsp_data(sizeof(scan_rsp), scan_rsp);
 
 	ll_start_adv();
 
 	start_ms_timer(MS_TIMER0, MS_REPEATED_CALL, RTC_TICKS_MS(1027), log_dump_handler);
 
     while (true){
-    	//__WFI();
+    	__WFI();
     }
 }

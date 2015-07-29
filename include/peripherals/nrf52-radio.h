@@ -70,6 +70,8 @@ void radio_set_random_adrs(uint8_t * rand_adrs);
 
 void radio_set_adv_data(uint8_t len, uint8_t* data_ptr);
 
+void radio_set_scan_rsp_data(uint8_t len, uint8_t* data_ptr);
+
 void radio_prepare_adv(void);
 
 void radio_send_adv(void);
@@ -77,30 +79,6 @@ void radio_send_adv(void);
 void radio_init(void);
 
 void radio_deinit(void);
-//static inline int8_t ch2freq(uint8_t ch)
-//{
-//	/* nRF51 Series Reference Manual v2.1, section 16.2.19, page 91
-//	 * Link Layer specification section 1.4.1, Core 4.1, page 2502
-//	 *
-//	 * The nRF51822 is configured using the frequency offset from
-//	 * 2400 MHz.
-//	 */
-//	switch (ch) {
-//	case 37:
-//		return 2;
-//	case 38:
-//		return 26;
-//	case 39:
-//		return 80;
-//	default:
-//		if (ch > 39)
-//			return -1;
-//		else if (ch < 11)
-//			return 4 + (2 * ch);
-//		else
-//			return 6 + (2 * ch);
-//	}
-//}
 
 /** @} */
 #endif /* NRF52_RADIO_H_ */
