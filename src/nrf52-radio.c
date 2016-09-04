@@ -130,14 +130,7 @@ void (*dis_handler[])(void) = {
 
 static struct radio_context {
 	/** Radio specific **/
-	volatile radio_states state;			//4 bytes
-	uint8_t adv_txbuf[MAX_RADIO_PDU];		//39 bytes
-	uint8_t adv_rxbuf[MAX_RADIO_PDU];		//39 bytes
-	uint8_t scan_rsp[MAX_RADIO_PDU];		//39 bytes
-
-	/**General**/
-	uint8_t adrs_type;					//1 byte
-	uint8_t MAC_adrs[ADRS_LEN];			//6 bytes
+	volatile radio_states state;		//4 bytes
 
 	/**Advertisement**/
 	uint8_t adv_type;					//1 byte
@@ -145,6 +138,26 @@ static struct radio_context {
 	int8_t adv_pwr;						//1 byte
 	volatile uint8_t adv_idx;			//1 byte
 	volatile bool is_scan;				//1 byte
+	uint8_t adv_txbuf[MAX_RADIO_PDU];	//39 bytes
+	uint8_t adv_rxbuf[MAX_RADIO_PDU];	//39 bytes
+	uint8_t scan_rsp[MAX_RADIO_PDU];	//39 bytes
+
+	/**Connection**/
+	uint32_t conn_aa;					//4 bytes
+	uint32_t conn_crc_init;				//4 bytes
+	uint8_t win_size;					//1 byte
+	uint16_t win_offset;				//2 bytes
+	uint16_t conn_intvl;				//2 bytes
+	uint16_t conn_ltcy;					//2 bytes
+	uint16_t conn_timeout;				//2 bytes
+	uint8_t	conn_ch_map[5];				//5 bytes
+	uint8_t conn_hop;					//1 byte
+	uint8_t	conn_sca;					//1 bytes
+
+	/**General**/
+	uint8_t adrs_type;					//1 byte
+	uint8_t MAC_adrs[ADRS_LEN];			//6 bytes
+
 } radio_ctx;
 
 #ifdef DEBUG
